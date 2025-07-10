@@ -324,14 +324,76 @@
 import Product from "./productModel.js";
 import asyncHandler from "express-async-handler";
 import { AppError } from "../../utils/appError.js";
+import { Features } from "../../utils/features.js";
+import Category from "../category/categoryModel.js";
+import Brand from "../brand/brandModel.js";
+// import { APIFeatures } from "../../utils/feature.js";
 
 // Get all products
 export const getAllProducts = asyncHandler(async (req, res, next) => {
-  const products = await Product.find()
-    .populate("category", "name en ar description")
-    .populate("subCategory", "name en ar description")
-    .populate("subSubcategory", "name en ar description")
+  let filteredQuery = { ...req.query };
+
+  // البحث عن id الكاتيجوري إذا تم إرسال الاسم (en فقط)
+  if (filteredQuery.categorySlug) {
+    const category = await Category.findOne({
+      "slug.en": { $regex: filteredQuery.categorySlug, $options: "i" },
+    });
+    if (category) filteredQuery.category = category._id;
+    delete filteredQuery.categorySlug;
+  }
+
+  // البحث عن id البراند إذا تم إرسال الاسم (en فقط)
+  if (filteredQuery.brandSlug) {
+    const brand = await Brand.findOne({
+      slug: { $regex: filteredQuery.brandSlug, $options: "i" },
+    });
+    if (brand) filteredQuery.brand = brand._id;
+    delete filteredQuery.brandSlug;
+  }
+
+  // فلترة اللون (en فقط)
+  let colorName = null;
+  if (filteredQuery.color) {
+    colorName = filteredQuery.color.toLowerCase();
+    delete filteredQuery.color;
+  }
+
+  // فلترة averageRating بنفس أسلوب basePrice
+  // if (filteredQuery.averageRating) {
+  //   filteredQuery.averageRating = Number(filteredQuery.averageRating);
+  // }
+  // ["gte", "gt", "lte", "lt"].forEach((op) => {
+  //   if (filteredQuery[`averageRating[${op}]`]) {
+  //     if (!filteredQuery.averageRating) filteredQuery.averageRating = {};
+  //     filteredQuery.averageRating[`$${op}`] = Number(
+  //       filteredQuery[`averageRating[${op}]`]
+  //     );
+  //     delete filteredQuery[`averageRating[${op}]`];
+  //   }
+  // });
+
+  // تفعيل الفلترة المتقدمة (بما فيها السعر والتقييم)
+  const features = new Features(Product.find(), filteredQuery)
+    .filter()
+    .sort()
+    .pagination()
+    .fields();
+
+  let products = await features.mongooseQuery
+    .populate("category", "name slug description")
     .populate("brand", "name description logoUrl websiteUrl");
+
+  // فلترة اللون بعد الجلب (en فقط)
+  if (colorName) {
+    products = products.filter((prod) =>
+      prod.variants?.some((variant) =>
+        variant.options?.some(
+          (option) =>
+            option.colorName && option.colorName.en?.toLowerCase() === colorName
+        )
+      )
+    );
+  }
 
   res.status(200).json({
     status: "success",
