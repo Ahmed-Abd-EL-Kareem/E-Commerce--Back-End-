@@ -8,14 +8,23 @@ import cookieParser from "cookie-parser";
 import connectDB from "./src/config/db.js";
 import init from "./index.routes.js";
 
+// Load environment variables first
+dotenv.config();
+
 // Initialize Express application
 const app = express();
 
-// Configure CORS middleware to allow all origins
+// Configure CORS middleware - Updated for production
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"], // Allow all origins
-    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://e-commerce-back-65kq8vo9l-ahmeds-projects-e9ff88c7.vercel.app",
+      // Add your frontend domain here
+      process.env.FRONTEND_URL,
+    ].filter(Boolean), // Remove undefined values
+    credentials: true,
   })
 );
 
@@ -23,16 +32,27 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Load environment variables from .env file
-dotenv.config();
 
 // Initialize routes
 init(app);
 
-//Database Connection
-connectDB();
+// Database Connection with error handling
+const initializeApp = async () => {
+  try {
+    await connectDB();
+    console.log("✅ Database connected successfully");
+  } catch (error) {
+    console.error("❌ Database connection failed:", error.message);
+    // In production, you might want to exit the process
+    // process.exit(1);
+  }
+};
+
+// Initialize database connection
+initializeApp();
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`🚀 Server is running on port ${port}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
 });
