@@ -14,6 +14,10 @@ const orderSchema = new mongoose.Schema(
           ref: "Product",
           required: true,
         },
+        sku: {
+          type: String,
+          required: true,
+        },
         quantity: {
           type: Number,
           required: true,
@@ -33,16 +37,16 @@ const orderSchema = new mongoose.Schema(
     shippingAddress: {
       address: {
         en: { type: String, required: true },
-        ar: { type: String, required: true }
+        ar: { type: String, required: true },
       },
       city: {
         en: { type: String, required: true },
-        ar: { type: String, required: true }
+        ar: { type: String, required: true },
       },
       postalCode: { type: String, required: true },
       country: {
         en: { type: String, required: true },
-        ar: { type: String, required: true }
+        ar: { type: String, required: true },
       },
     },
     status: {
@@ -57,8 +61,14 @@ const orderSchema = new mongoose.Schema(
       },
       ar: {
         type: String,
-        enum: ["قيد الانتظار", "قيد المعالجة", "تم الشحن", "تم التسليم", "ملغي"],
-      }
+        enum: [
+          "قيد الانتظار",
+          "قيد المعالجة",
+          "تم الشحن",
+          "تم التسليم",
+          "ملغي",
+        ],
+      },
     },
     paymentMethod: {
       type: String,
@@ -74,7 +84,7 @@ const orderSchema = new mongoose.Schema(
       ar: {
         type: String,
         enum: ["نقدي", "بطاقة ائتمان", "تحويل بنكي"],
-      }
+      },
     },
     paymentStatus: {
       type: String,
@@ -89,11 +99,11 @@ const orderSchema = new mongoose.Schema(
       ar: {
         type: String,
         enum: ["قيد الانتظار", "مدفوع", "فشل"],
-      }
+      },
     },
     notes: {
       en: { type: String },
-      ar: { type: String }
+      ar: { type: String },
     },
     isActive: {
       type: Boolean,
@@ -106,25 +116,25 @@ const orderSchema = new mongoose.Schema(
 );
 
 // Pre-save middleware to automatically set display values based on status
-orderSchema.pre('save', function(next) {
+orderSchema.pre("save", function (next) {
   const statusMap = {
     pending: { en: "Pending", ar: "قيد الانتظار" },
     processing: { en: "Processing", ar: "قيد المعالجة" },
     shipped: { en: "Shipped", ar: "تم الشحن" },
     delivered: { en: "Delivered", ar: "تم التسليم" },
-    cancelled: { en: "Cancelled", ar: "ملغي" }
+    cancelled: { en: "Cancelled", ar: "ملغي" },
   };
 
   const paymentMethodMap = {
     cash: { en: "Cash", ar: "نقدي" },
     credit_card: { en: "Credit Card", ar: "بطاقة ائتمان" },
-    bank_transfer: { en: "Bank Transfer", ar: "تحويل بنكي" }
+    bank_transfer: { en: "Bank Transfer", ar: "تحويل بنكي" },
   };
 
   const paymentStatusMap = {
     pending: { en: "Pending", ar: "قيد الانتظار" },
     paid: { en: "Paid", ar: "مدفوع" },
-    failed: { en: "Failed", ar: "فشل" }
+    failed: { en: "Failed", ar: "فشل" },
   };
 
   if (this.status && statusMap[this.status]) {

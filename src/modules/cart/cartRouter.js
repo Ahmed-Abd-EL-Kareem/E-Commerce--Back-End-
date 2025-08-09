@@ -22,12 +22,10 @@ router.delete("/admin/:cartId", restrictTo("admin"), deleteCartById);
 router.patch("/admin/:cartId", restrictTo("admin"), updateCartById);
 
 // User cart routes
-router.route("/")
-  .get(getCart)
-  .post(addToCart)
-  .delete(clearCart);
+router.route("/").get(getCart).post(addToCart).delete(clearCart);
 
-router.route("/:productId")
+router
+  .route("/:productId/:sku")
   .delete(removeFromCart)
   .patch(updateCartItemQuantity);
 

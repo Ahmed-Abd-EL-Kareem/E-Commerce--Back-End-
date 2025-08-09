@@ -394,6 +394,8 @@ export const getAllProducts = asyncHandler(async (req, res, next) => {
 
   const features = new Features(Product.find(), filteredQuery)
     .filter()
+    .search()
+    .searchBySku()
     .sort()
     .pagination()
     .fields();

@@ -1,6 +1,10 @@
 import express from "express";
 import * as productController from "./productController.js";
-import { isLoggedIn, protect, restrictTo } from "../../middleware/authorization.js";
+import {
+  isLoggedIn,
+  protect,
+  restrictTo,
+} from "../../middleware/authorization.js";
 import { upload } from "../../config/cloudinary.js";
 
 const router = express.Router();

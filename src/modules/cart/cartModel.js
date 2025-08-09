@@ -219,6 +219,14 @@ const cartItemSchema = new mongoose.Schema({
     required: true,
     min: 1,
   },
+  price: {
+    type: Number,
+    required: true,
+  },
+  basePrice: {
+    type: Number,
+    required: true,
+  },
   notes: {
     en: { type: String },
     ar: { type: String },
@@ -272,6 +280,7 @@ const cartSchema = new mongoose.Schema(
       en: { type: String },
       ar: { type: String },
     },
+
     notes: {
       en: { type: String },
       ar: { type: String },
@@ -321,9 +330,45 @@ const cartSchema = new mongoose.Schema(
 
 //   next();
 // });
+// cartSchema.pre("save", function (next) {
+//   this.items = this.items.filter((item) => item.sku && item.sku.trim() !== "");
+//   this.totalPrice = this.items.reduce(
+//     (total, item) => total + item.price * item.quantity,
+//     0
+//   );
+
+//   const statusMap = {
+//     active: { en: "Active", ar: "نشط" },
+//     abandoned: { en: "Abandoned", ar: "مهجور" },
+//     converted: { en: "Converted", ar: "تم التحويل" },
+//   };
+
+//   if (this.status && statusMap[this.status]) {
+//     this.statusDisplay = statusMap[this.status];
+//   }
+
+//   next();
+// });
+// In cartModel.js
+// In cartModel.js
 cartSchema.pre("save", function (next) {
+  // console.log("Pre-save middleware triggered");
+  // console.log("Items before filter:", this.items);
+
+  // Ensure items with SKU are considered and prevent undefined SKUs
   this.items = this.items.filter((item) => item.sku && item.sku.trim() !== "");
 
+  // console.log("Items after filter:", this.items);
+
+  // Calculate total price before discount
+  this.totalPrice = this.items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  // console.log("Calculated totalPrice:", this.totalPrice);
+
+  // Apply status text mapping for localization
   const statusMap = {
     active: { en: "Active", ar: "نشط" },
     abandoned: { en: "Abandoned", ar: "مهجور" },
@@ -334,8 +379,11 @@ cartSchema.pre("save", function (next) {
     this.statusDisplay = statusMap[this.status];
   }
 
+  // console.log("Pre-save middleware completed");
   next();
 });
+
+// Virtual to get the price after discount is applied
 
 // Methods
 // cartSchema.methods.addItem = async function (
@@ -395,9 +443,20 @@ cartSchema.pre("save", function (next) {
 cartSchema.methods.addItem = async function (
   productId,
   quantity,
+  price,
+  basePrice,
   notes = null,
   sku
 ) {
+  // console.log("addItem called with:", {
+  //   productId,
+  //   quantity,
+  //   price,
+  //   basePrice,
+  //   notes,
+  //   sku,
+  // });
+
   if (!sku) throw new Error("SKU is required");
 
   const existingItem = this.items.find(
@@ -405,14 +464,28 @@ cartSchema.methods.addItem = async function (
       item.product.toString() === productId.toString() && item.sku === sku
   );
 
+  // console.log("Existing item found:", existingItem);
+
   if (existingItem) {
     existingItem.quantity += quantity;
     if (notes) existingItem.notes = notes;
+    // console.log("Updated existing item quantity to:", existingItem.quantity);
   } else {
-    this.items.push({ product: productId, quantity, sku, notes });
+    this.items.push({
+      product: productId,
+      quantity,
+      price,
+      sku,
+      notes,
+      basePrice,
+    });
+    // console.log("Added new item to cart");
   }
 
-  return this.save();
+  // console.log("Cart items before save:", this.items);
+  const result = await this.save();
+  // console.log("Cart saved successfully");
+  return result;
 };
 
 cartSchema.methods.removeItem = async function (productId, sku) {
@@ -439,6 +512,29 @@ cartSchema.methods.updateItemQuantity = async function (
   return this;
 };
 
+cartSchema.methods.updateItemNotes = async function (productId, sku, notes) {
+  const item = this.items.find(
+    (item) =>
+      item.product.toString() === productId.toString() && item.sku === sku
+  );
+  if (item) {
+    item.notes = notes;
+    return this.save();
+  }
+  return this;
+};
+
+cartSchema.methods.applyDiscount = async function (
+  discountPercent,
+  description = null
+) {
+  this.discount = discountPercent;
+  if (description) {
+    this.discountDescription = description;
+  }
+  return this.save();
+};
+
 cartSchema.methods.clearCart = async function () {
   this.items = [];
   this.totalPrice = 0;
@@ -448,10 +544,31 @@ cartSchema.methods.clearCart = async function () {
   return this.save();
 };
 
+// cartSchema.virtual("totalPriceAfterDiscount").get(function () {
+//   return this.totalPrice - (this.totalPrice * this.discount) / 100;
+// });
+
+// cartSchema.virtual("discountText").get(function () {
+//   if (this.discount > 0) {
+//     return {
+//       en: `${this.discount}% discount applied${
+//         this.discountDescription?.en ? ": " + this.discountDescription.en : ""
+//       }`,
+//       ar: `تم تطبيق خصم ${this.discount}%${
+//         this.discountDescription?.ar ? ": " + this.discountDescription.ar : ""
+//       }`,
+//     };
+//   }
+//   return {
+//     en: "No discount applied",
+//     ar: "لم يتم تطبيق أي خصم",
+//   };
+// });
 cartSchema.virtual("totalPriceAfterDiscount").get(function () {
   return this.totalPrice - (this.totalPrice * this.discount) / 100;
 });
 
+// Virtual to show discount text
 cartSchema.virtual("discountText").get(function () {
   if (this.discount > 0) {
     return {
@@ -468,6 +585,5 @@ cartSchema.virtual("discountText").get(function () {
     ar: "لم يتم تطبيق أي خصم",
   };
 });
-
 const Cart = mongoose.model("Cart", cartSchema);
 export default Cart;
