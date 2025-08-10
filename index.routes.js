@@ -31,6 +31,10 @@ const init = (app) => {
 
   // Database connection middleware removed for simplicity
   // app.use("/api", ensureDBConnection);
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.originalUrl}`);
+  next();
+});
 
   app.use("/api/auth", authRouter);
   app.use("/api/users", userRouter);
