@@ -79,6 +79,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
+      "https://e-commerce-dashboard-git-main-ahmeds-projects-e9ff88c7.vercel.app",
       "https://e-commerce-back-65kq8vo9l-ahmeds-projects-e9ff88c7.vercel.app",
       process.env.FRONTEND_URL,
     ].filter(Boolean),
